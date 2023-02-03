@@ -1,35 +1,34 @@
-from selenium import webdriver
-from bs4 import BeautifulSoup
+
 import pandas as pd
+from bs4 import BeautifulSoup
+from selenium import webdriver
 
-
-cities = ["Newyork, NY", "Boston, MA", "Arlington, TX", "Chicago, IL", "Miami, FL", "Dallas, TX", "Washington, DC"]
-
-dict_columns = {"City": 1, "Population": 1, "Unemployement Rate": 4, "Median Income": 6, "Median Home Price": 8,
-                "Median Age": 10,
-                "Comfort Index(Climate)": 12}
+driver = webdriver.Chrome("/home/mohit/drivers/chromedriver_linux64/chromedriver")
+url = "https://www.redfin.com/city/1826/MA/Boston/filter/sort=lo-price"
+cities = ["Boston, MA", "New York, NY", "Dallas, TX", "Los Angeles, Southern California", "Chicago, Illinois",
+          "Washington, DC", "San Fransisco, Northern California", "San Diego, California", "Phoenix, Arizona", "Houston, TX",
+          "Austin, TX", "Columbus, Ohio"]
+column = ["Home Address", "Details", "Price"]
 rows = list()
-for i in cities:
-
-    data = dict()
-    driver = webdriver.Chrome("/home/mohit/drivers/chromedriver_linux64/chromedriver")
-    driver.get("https://www.bestplaces.net/")
+urlTemp = url
+for k in range(8):
     driver.maximize_window()
-    driver.find_element_by_id("txtSearch").send_keys(i)
-    driver.find_element_by_name("ctl00$btnSearch").click()
-    htmlpage = driver.page_source
-    soup = BeautifulSoup(htmlpage, "html.parser")
-    mainRow = soup.find("div", class_="card-body container")
-    mainRow2 = mainRow.find("div", class_="row")
-    blocks = mainRow2.find_all("div", class_="col-md-4 px-1")
-    row1 = blocks[0].find_all_next("p")
+    driver.get(urlTemp)
+    htmlContent = driver.page_source
+    soup = BeautifulSoup(htmlContent, "html.parser")
+    div = soup.find("div", class_="HomeCardsContainer flex flex-wrap")
+    cards = div.find_all_next("div",class_="HomeCardContainer defaultSplitMapListView")
+    for i in cards:
+        row = list()
+        div2 = i.find_next("div",class_="bottomV2")
+        div3 = div2.find_all("div")
+        row.append(div3[len(div3)-1].text)
+        row.append(div3[3].text)
+        row.append(div2.find("span").text)
+        rows.append(row)
+    urlTemp = url + "/page-"+str(k+2)
+df = pd.DataFrame(rows,columns=column)
+driver.quit()
+df.to_csv("Boston_homes2.csv", index=False)
+print(df)
 
-    for key, value in dict_columns.items():
-        if key == "City":
-            data.update({key: i})
-        else:
-            data.update({key: row1[value].text})
-    rows.append(data)
-    driver.quit()
-df = pd.DataFrame(rows)
-df.to_csv("City_profile.csv", index=False)
